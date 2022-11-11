@@ -1,0 +1,15 @@
+/p2
+/p2-*
+/tests/*.test
+*.orig
+/cover.out
+/cover.*.out
+/.idea
+/.vscode
+/coverage
+/pkg/entrypoint/tests/directory-mode*/output/
+/pkg/entrypoint/tests/directory-mode*/*.tar
+/.bin
+/.junit
+/bin
+
