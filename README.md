@@ -4,4 +4,3 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/wrouesnel/vault-automation-client)](https://goreportcard.com/report/github.com/wrouesnel/vault-automation-client)
 
 A daemon for automating Vault cluster initialization, sealing and unsealing.
-
