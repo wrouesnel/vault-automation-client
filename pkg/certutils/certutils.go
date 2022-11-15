@@ -35,3 +35,12 @@ func LoadCertificatesFromPem(pemCerts []byte) ([]*x509.Certificate, error) {
 	}
 	return certs, nil
 }
+
+func EncodeX509ToPem(cert *x509.Certificate) string {
+	if cert == nil {
+		return ""
+	}
+
+	caCertBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+	return string(caCertBytes)
+}

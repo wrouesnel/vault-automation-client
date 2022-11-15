@@ -1,11 +1,13 @@
 package unsealer
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/ldez/mimetype"
 	"github.com/pkg/errors"
+	"github.com/wrouesnel/vault-automation-client/pkg/certutils"
 	"go.uber.org/zap"
 	"go.withmatt.com/httpheaders"
 	"net/url"
@@ -55,6 +57,9 @@ type VaultUnsealerConfig struct {
 	CanInitialize bool
 	// CanUnseal means this agent should try and unseal sealed instances
 	CanUnseal bool
+	// LeaderCACert is the certificate used with the Raft leader.
+	// If nil, then it is not sent and system CA certs will be used.
+	LeaderCACert *x509.Certificate
 }
 
 type VaultUnsealerInitializationError struct {
@@ -134,10 +139,7 @@ func (vu *vaultUnsealer) log() *zap.Logger {
 }
 
 func (vu *vaultUnsealer) setConfig(config VaultUnsealerConfig) error {
-	vu.config = &VaultUnsealerConfig{
-		PollFrequency:   config.PollFrequency,
-		UnsealKeySource: config.UnsealKeySource,
-	}
+	vu.config = &config
 
 	if vu.config.UnsealKeySource == nil {
 		vu.log().Warn("UnsealKeySource is nil - no unsealing actions will succeed!")
@@ -175,23 +177,18 @@ func (vu *vaultUnsealer) doVaultInit() error {
 	vu.log().Info("Attempting to initialize uninitialized Vault instance")
 
 	vu.log().Debug("Discovering leader")
-	resp, err := vu.EndpointClient.R().Get("/v1/sys/leader")
+	resp, jsonResp, isError, err := vaultRequest(vu.EndpointClient.R().Get("/v1/sys/leader"))
 	if err != nil {
 		vu.log().Error("HTTP request to find leader instance failed", zap.Error(err))
-		return errors.Wrap(err, "doVaultInit")
+		return errors.Wrap(err, "doVaultInit:request")
 	}
 
-	if resp.IsError() {
-		vu.log().Error("Endpoint returned error",
+	if isError {
+		vu.log().Error("Error while discovering leader",
 			zap.Int("status_code", resp.StatusCode()),
-			zap.String("status_msg", resp.Status()))
+			zap.String("status_msg", resp.Status()),
+			zap.Strings("errors", errorResponse(jsonResp)))
 		return &VaultUnsealerOperationError{msg: "leader discovery failed"}
-	}
-
-	jsonResp := map[string]interface{}{}
-	if err := json.Unmarshal(resp.Body(), &jsonResp); err != nil {
-		vu.log().Error("Could not unmarshal Vault response", zap.Error(err))
-		return errors.Wrap(err, "doVaultInit:json.Unmarshal")
 	}
 
 	if _, found := jsonResp["leader_address"]; !found {
@@ -208,18 +205,24 @@ func (vu *vaultUnsealer) doVaultInit() error {
 	vu.log().Info("Discovered raft leader address successfully", zap.String("leader_address", leaderAddress))
 
 	vu.log().Info("Attempting to join cluster")
-	resp, err = vu.InstanceClient.R().SetBody(map[string]interface{}{
+	joinRequest := map[string]interface{}{
 		"leader_api_addr": leaderAddress,
-	}).Put("/v1/sys/storage/raft/join")
+	}
+	if vu.config.LeaderCACert != nil {
+		joinRequest["leader_ca_cert"] = certutils.EncodeX509ToPem(vu.config.LeaderCACert)
+	}
+
+	resp, jsonResp, isError, err = vaultRequest(vu.InstanceClient.R().SetBody(joinRequest).Put("/v1/sys/storage/raft/join"))
 	if err != nil {
-		vu.log().Error("HTTP request to find leader instance failed", zap.Error(err))
+		vu.log().Error("HTTP request to join Raft cluster failed", zap.Error(err))
 		return errors.Wrap(err, "doVaultInit: joining cluster")
 	}
 
-	if resp.IsError() {
-		vu.log().Error("Endpoint returned error",
+	if isError {
+		vu.log().Error("Error while trying to join the Raft cluster",
 			zap.Int("status_code", resp.StatusCode()),
-			zap.String("status_msg", resp.Status()))
+			zap.String("status_msg", resp.Status()),
+			zap.Strings("errors", errorResponse(jsonResp)))
 		return &VaultUnsealerOperationError{msg: "raft join failed"}
 	}
 
@@ -288,7 +291,7 @@ func (vu *vaultUnsealer) doVaultUnseal() error {
 func (vu *vaultUnsealer) unsealPoll() {
 	initialized := vu.checkVaultInit()
 	if !initialized && !vu.config.CanInitialize {
-		vu.log().Warn("Vault not initialized and this agent is configured not to initialize it.")
+		vu.log().Warn("Vault not initialized and this agent is configured not to initialize it.", zap.Bool("can_initialize", vu.config.CanInitialize))
 		return
 	}
 
@@ -306,10 +309,14 @@ func (vu *vaultUnsealer) unsealPoll() {
 		return
 	}
 
+	if sealed && !vu.config.CanUnseal {
+		vu.log().Warn("Vault sealed and this agent is configured not to unseal it.", zap.Bool("can_unseal", vu.config.CanUnseal))
+	}
+
 	if !sealed {
 		vu.log().Debug("Vault is unsealed. No action necessary.")
 		return
-	} else if vu.config.CanUnseal {
+	} else if !vu.config.CanUnseal {
 		vu.log().Warn("Vault is sealed but agent is configured to not unseal")
 		return
 	}
