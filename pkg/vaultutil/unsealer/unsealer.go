@@ -41,7 +41,7 @@ import (
 //
 //type KeySourceSpecVault struct {
 //	VaultClusterAddr *url.URL `json:"vault_cluster_addr"`
-//	Path             string   `json:"path"`
+//	AuthPath             string   `json:"path"`
 //	Key              string   `json:"key"`
 //}
 

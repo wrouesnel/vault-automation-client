@@ -8,7 +8,7 @@ import (
 )
 
 type FileSource struct {
-	FilePath string `mapstructure:"path" help:"Path to the file with the unseal-key'"`
+	FilePath string `mapstructure:"path" help:"AuthPath to the file with the unseal-key'"`
 }
 
 func (fu *FileSource) GetUnsealKey() (string, error) {

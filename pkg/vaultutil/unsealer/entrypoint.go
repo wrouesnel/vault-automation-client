@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
@@ -72,29 +71,9 @@ func UnsealerEntrypoint(ctx context.Context, uc *UnsealerCommand) error {
 
 	var leaderCACert *x509.Certificate
 	if uc.InitOptions.LeaderCACert != "" {
-		var certData []byte
-		if _, err := os.Stat(uc.InitOptions.LeaderCACert); err == nil {
-			logger.Info("Loading leader CA cert as file path to PEM file")
-			certData, err = ioutil.ReadFile(uc.InitOptions.LeaderCACert)
-		} else if _, err := certutils.LoadCertificatesFromPem([]byte(uc.InitOptions.LeaderCACert)); err == nil {
-			logger.Info("Loading leader CA cert as literal value PEM")
-			certData = []byte(uc.InitOptions.LeaderCACert)
-		} else if certData, err = base64.StdEncoding.DecodeString(uc.InitOptions.LeaderCACert); err == nil {
-			logger.Info("Loading leader CA cert as base64 encoded PEM")
-		} else {
-			logger.Error("leader-ca-cert specified but doesn't appear to be any PEM format")
-			return &VaultUnsealerConfigError{msg: "leader-ca-cert not a PEM filepath, PEM data or base64-encoded PEM"}
-		}
-
-		certs, err := certutils.LoadCertificatesFromPem(certData)
+		certs, err := certutils.ReadCertificate(uc.InitOptions.LeaderCACert)
 		if err != nil {
-			logger.Error("certificates could not be decoded", zap.Error(err))
-			return errors.Wrap(err, "leader-ca-cert could not be decoded")
-		}
-
-		if len(certs) == 0 {
-			logger.Error("leader-ca-cert specified but no certificates in data")
-			return &VaultUnsealerConfigError{msg: "leader-ca-cert contained zero certificates"}
+			return errors.Wrap(err, "leader-ca-cert could not be parsed for a certificate")
 		}
 
 		if len(certs) > 1 {
