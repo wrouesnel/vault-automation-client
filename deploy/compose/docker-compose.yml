@@ -1,0 +1,109 @@
+version: "3.9"
+
+services:
+  vault:
+    container_name: vault
+    image: nginx
+    ports:
+      - 8200:8200
+    volumes:
+      - ./configs/nginx.conf:/etc/nginx/conf.d/nginx.conf
+      - ./configs/tls:/configs/tls
+
+  vault-0:
+    container_name: vault-0
+    image: vault:latest
+    environment:
+      NAME: vault-0
+    ports:
+      - "8300:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./data/backend-0:/vault/file
+      - ./logs/logs-0:/vault/logs
+      - ./configs:/vault/config
+      - ./plugins:/vault/plugins
+    entrypoint: vault server -config=/vault/config/vault-0.hcl
+    networks:
+      default:
+        aliases:
+          - vault-0
+
+  vault-1:
+    container_name: vault-1
+    image: vault:latest
+    environment:
+      NAME: vault-1
+    ports:
+      - "8301:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./data/backend-1:/vault/file
+      - ./logs/logs-1:/vault/logs
+      - ./configs:/vault/config
+      - ./plugins:/vault/plugins
+    entrypoint: vault server -config=/vault/config/vault-1.hcl
+    networks:
+      default:
+        aliases:
+          - vault-1
+
+  vault-2:
+    container_name: vault-2
+    image: vault:latest
+    environment:
+      NAME: vault-2
+    ports:
+      - "8302:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./data/backend-2:/vault/file
+      - ./logs/logs-2:/vault/logs
+      - ./configs:/vault/config
+      - ./plugins:/vault/plugins
+    entrypoint: vault server -config=/vault/config/vault-2.hcl
+    networks:
+      default:
+        aliases:
+          - vault-2
+  vault-3:
+    container_name: vault-3
+    image: vault:latest
+    environment:
+      NAME: vault-3
+    ports:
+      - "8303:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./data/backend-3:/vault/file
+      - ./logs/logs-3:/vault/logs
+      - ./configs:/vault/config
+      - ./plugins:/vault/plugins
+    entrypoint: vault server -config=/vault/config/vault-3.hcl
+    networks:
+      default:
+        aliases:
+          - vault-3
+  vault-4:
+    container_name: vault-4
+    image: vault:latest
+    environment:
+      NAME: vault-4
+    ports:
+      - "8304:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./data/backend-4:/vault/file
+      - ./logs/logs-4:/vault/logs
+      - ./configs:/vault/config
+      - ./plugins:/vault/plugins
+    entrypoint: vault server -config=/vault/config/vault-4.hcl
+    networks:
+      default:
+        aliases:
+          - vault-4

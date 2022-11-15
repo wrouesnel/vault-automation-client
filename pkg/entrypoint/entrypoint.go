@@ -1,12 +1,17 @@
 package entrypoint
 
 import (
+	"context"
 	"fmt"
 	"github.com/alecthomas/kong"
 	"github.com/samber/lo"
+	"github.com/wrouesnel/vault-automation-client/pkg/vaultutil/unsealer"
 	"github.com/wrouesnel/vault-automation-client/version"
 	"go.uber.org/zap"
 	"io"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type Options struct {
@@ -16,6 +21,8 @@ type Options struct {
 	} `embed:"" prefix:"logging."`
 
 	Version bool `help:"Print the version and exit"`
+
+	Unsealer unsealer.UnsealerCommand `cmd:"" help:"Start the Vault Unsealer agent"`
 }
 
 type LaunchArgs struct {
@@ -37,7 +44,7 @@ func Entrypoint(args LaunchArgs) int {
 
 	// Command line parsing can now happen
 	parser := lo.Must(kong.New(&options, kong.Description(version.Description)))
-	_, err = parser.Parse(args.Args)
+	ctx, err := parser.Parse(args.Args)
 	if err != nil {
 		_, _ = fmt.Fprintf(args.StdErr, "Argument error: %s", err.Error())
 		return 1
@@ -63,9 +70,39 @@ func Entrypoint(args LaunchArgs) int {
 	// Install as the global logger
 	zap.ReplaceGlobals(logger)
 
+	logger.Info("Launched with command line", zap.Strings("cmdline", args.Args))
+
 	if options.Version {
 		lo.Must(fmt.Fprintf(args.StdOut, "%s", version.Version))
 		return 0
+	}
+
+	appCtx, cancelFn := context.WithCancel(context.Background())
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM)
+
+	go func() {
+		for sig := range sigCh {
+			logger.Info("Caught signal", zap.String("signal", sig.String()))
+			cancelFn()
+			return
+		}
+	}()
+
+	logger = logger.With(zap.String("command", ctx.Command()))
+
+	logger.Info("Starting command")
+	switch ctx.Command() {
+	case "unsealer <vault-endpoint> <vault-instance>":
+		err = unsealer.UnsealerEntrypoint(appCtx, &options.Unsealer)
+	default:
+		logger.Error("Command not implemented")
+	}
+
+	logger.Debug("Finished command")
+	if err != nil {
+		logger.Error("Command exited with error", zap.Error(err))
+		return 1
 	}
 
 	return 0
