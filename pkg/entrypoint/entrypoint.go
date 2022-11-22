@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/alecthomas/kong"
 	"github.com/samber/lo"
+	"github.com/wrouesnel/vault-automation-client/pkg/templating"
 	"github.com/wrouesnel/vault-automation-client/pkg/vaultutil/unsealer"
 	"github.com/wrouesnel/vault-automation-client/version"
 	"go.uber.org/zap"
@@ -22,7 +23,8 @@ type Options struct {
 
 	Version bool `help:"Print the version and exit"`
 
-	Unsealer unsealer.UnsealerCommand `cmd:"" help:"Start the Vault Unsealer agent"`
+	Unsealer   unsealer.UnsealerCommand  `cmd:"" help:"Start the Vault Unsealer agent"`
+	ReadEnvVar templating.ReadEnvCommand `cmd:"" help:"Read environment variable to file"`
 }
 
 type LaunchArgs struct {
@@ -95,6 +97,8 @@ func Entrypoint(args LaunchArgs) int {
 	switch ctx.Command() {
 	case "unsealer <vault-endpoint> <vault-instance>":
 		err = unsealer.UnsealerEntrypoint(appCtx, &options.Unsealer)
+	case "read-env-var <name> <output>":
+		err = templating.ReadEnvEntrypoint(appCtx, &options.ReadEnvVar)
 	default:
 		logger.Error("Command not implemented")
 	}
