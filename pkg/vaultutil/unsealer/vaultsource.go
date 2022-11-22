@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/wrouesnel/vault-automation-client/pkg/certutils"
+	"go.uber.org/zap"
 	"strings"
 )
 
@@ -36,6 +37,9 @@ type VaultSource struct {
 
 // TODO: determine GetUnsealKey utility at startup
 func (k *VaultSource) GetUnsealKey() (string, error) {
+	logger := zap.L().With(zap.String("keysource", "vault"),
+		zap.String("vault_addr", k.VaultAddr), zap.String("auth_type", k.AuthType))
+
 	// Build the HTTP client
 	httpClient := resty.New()
 
@@ -61,8 +65,11 @@ func (k *VaultSource) GetUnsealKey() (string, error) {
 		k.AuthPath = fmt.Sprintf("auth/%s", k.AuthType)
 	}
 
+	logger = logger.With(zap.String("auth_path", k.AuthPath))
+
 	var clientToken string
 	if k.AuthType != "token" {
+		logger.Debug("Acquiring token to authenticate")
 		// This is necessary because *some* but not all Vault login methods accept the username
 		// as part of the AuthPath. This doesn't seem to be a continuing trend, so we can support them
 		// by specialcasing here and looking for "username" parameters.
@@ -79,8 +86,9 @@ func (k *VaultSource) GetUnsealKey() (string, error) {
 			loginParams = lo.OmitByKeys(k.AuthParameters, []string{"role"})
 		}
 
-		// Execute a login to the key-holding Vault.
-		_, jsonResp, isError, err := vaultRequest(httpClient.R().SetBody(loginParams).Post(fmt.Sprintf("%s/login%s", loginSpecialCase)))
+		authenticateUrl := fmt.Sprintf("/v1/%s/login%s", k.AuthPath, loginSpecialCase)
+		logger.Info("Authenticating to Vault", zap.String("login_url", authenticateUrl))
+		_, jsonResp, isError, err := vaultRequest(httpClient.R().SetBody(loginParams).Post(authenticateUrl))
 		if err != nil {
 			return "", errors.Wrap(err, fmt.Sprintf("error making HTTP request to Vault: %s", k.VaultAddr))
 		}
@@ -105,6 +113,7 @@ func (k *VaultSource) GetUnsealKey() (string, error) {
 		}
 		clientToken = token
 	} else {
+		logger.Debug("Using token authentication")
 		token, ok := k.AuthParameters["token"]
 		if !ok {
 			return "", &KeySourceErr{msg: "auth-parameters did not contain \"token\" for token auth"}
@@ -113,7 +122,8 @@ func (k *VaultSource) GetUnsealKey() (string, error) {
 	}
 
 	// Okay we have the clientToken. Now we can actually fetch the secret.
-	_, jsonResp, isError, err := vaultRequest(httpClient.R().SetHeader("X-Vault-Token", clientToken).Get(k.SecretPath))
+	_, jsonResp, isError, err := vaultRequest(httpClient.R().SetHeader("X-Vault-Token", clientToken).
+		Get(fmt.Sprintf("/v1/%s", k.SecretPath)))
 	if err != nil {
 		return "", errors.Wrap(err, fmt.Sprintf("error making HTTP request to Vault: %s %s", k.VaultAddr, k.SecretPath))
 	}
@@ -123,7 +133,12 @@ func (k *VaultSource) GetUnsealKey() (string, error) {
 	}
 
 	// Got the secret. Pull subkey from "data".
-	data, ok := jsonResp["data"].(map[string]interface{})
+	dataResp, ok := jsonResp["data"].(map[string]interface{})
+	if !ok {
+		return "", &KeySourceErr{msg: "no data field in secret response"}
+	}
+
+	data, ok := dataResp["data"].(map[string]interface{})
 	if !ok {
 		return "", &KeySourceErr{msg: "no data field in secret response"}
 	}
