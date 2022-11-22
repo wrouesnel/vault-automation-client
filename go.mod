@@ -5,7 +5,7 @@ go 1.18
 require gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 
 require (
-	github.com/alecthomas/kong v0.7.0
+	github.com/alecthomas/kong v0.7.1
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc
 	github.com/ldez/mimetype v0.1.0
