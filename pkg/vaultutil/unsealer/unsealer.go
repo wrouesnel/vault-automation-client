@@ -4,14 +4,15 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/ldez/mimetype"
 	"github.com/pkg/errors"
 	"github.com/wrouesnel/vault-automation-client/pkg/certutils"
 	"go.uber.org/zap"
 	"go.withmatt.com/httpheaders"
-	"net/url"
-	"time"
 )
 
 //type KeySource string
@@ -45,7 +46,7 @@ import (
 //	Key              string   `json:"key"`
 //}
 
-// KeySource interfaces implement the method to get a key source
+// KeySource interfaces implement the method to get a key source.
 type KeySource interface {
 	GetUnsealKey() (string, error)
 }
@@ -86,13 +87,13 @@ func (v VaultUnsealerOperationError) Error() string {
 	return fmt.Sprintf("vault unsealer operation: %s", v.msg)
 }
 
-// VaultUnsealer implements a watcher which will attempt to unseal a targeted Vault instance
+// VaultUnsealer implements a watcher which will attempt to unseal a targeted Vault instance.
 type VaultUnsealer interface {
 	Start(config VaultUnsealerConfig) chan error
 	Stop()
 }
 
-// VaultUnsealerInitializationConfig provides initialization parameters for the Vault Unsealer
+// VaultUnsealerInitializationConfig provides initialization parameters for the Vault Unsealer.
 type VaultUnsealerInitializationConfig struct {
 	// Logger is the *zap.Logger to use
 	Logger *zap.Logger
@@ -109,7 +110,7 @@ type VaultUnsealerInitializationConfig struct {
 	NewTicker func(duration time.Duration) *time.Ticker
 }
 
-// NewVaultUnsealer initializes a new VaultUnsealer and validates it's configuration
+// NewVaultUnsealer initializes a new VaultUnsealer and validates it's configuration.
 func NewVaultUnsealer(config VaultUnsealerInitializationConfig) (VaultUnsealer, error) {
 	if config.Logger == nil {
 		return nil, &VaultUnsealerInitializationError{"no logger provided"}
@@ -126,7 +127,7 @@ func NewVaultUnsealer(config VaultUnsealerInitializationConfig) (VaultUnsealer, 
 	}, nil
 }
 
-// vaultUnsealer
+// vaultUnsealer.
 type vaultUnsealer struct {
 	// configCh receives configuration when SetConfig is called
 	config *VaultUnsealerConfig
@@ -328,7 +329,7 @@ func (vu *vaultUnsealer) unsealPoll() {
 	}
 }
 
-// Start initializes the Vault unsealer to watch the instance
+// Start initializes the Vault unsealer to watch the instance.
 func (vu *vaultUnsealer) Start(config VaultUnsealerConfig) chan error {
 	errCh := make(chan error)
 	go func() {

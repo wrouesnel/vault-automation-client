@@ -5,18 +5,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net/url"
+	"os"
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 	"github.com/wrouesnel/vault-automation-client/pkg/certutils"
 	"github.com/wrouesnel/vault-automation-client/pkg/urlutil"
 	"go.uber.org/zap"
-	"io/ioutil"
-	"net/url"
-	"os"
-	"time"
 )
 
-// UnsealerCommand implements the command line interface for starting the unsealer
+// UnsealerCommand implements the command line interface for starting the unsealer.
 type UnsealerCommand struct {
 	TLSNoVerify bool     `help:"disable TLS verification"`
 	TLSCAFiles  []string `help:"additional TLS CA certificate files"`

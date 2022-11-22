@@ -3,10 +3,11 @@ package templating
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"io"
 	"os"
+
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 type ReadEnvCommand struct {

@@ -2,6 +2,7 @@ package unsealer
 
 import (
 	"encoding/json"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -9,7 +10,7 @@ import (
 
 // vaultRequest handles making a request to the Vault API and recovering the detailed
 // error response if the API itself does respond to us.
-// It returns the JSON data, whether the response was an error, and any underlying error
+// It returns the JSON data, whether the response was an error, and any underlying error.
 func vaultRequest(resp *resty.Response, err error) (*resty.Response, map[string]interface{}, bool, error) {
 	data := map[string]interface{}{}
 	if err != nil {
@@ -26,7 +27,7 @@ func vaultRequest(resp *resty.Response, err error) (*resty.Response, map[string]
 	return resp, data, resp.IsError(), nil
 }
 
-// errorResponse turns a list of errors from Vault into an actual string list
+// errorResponse turns a list of errors from Vault into an actual string list.
 func errorResponse(jsonResp map[string]interface{}) []string {
 	errorIntfs := jsonResp["errors"].([]interface{})
 	return lo.Map(errorIntfs, func(item interface{}, index int) string {

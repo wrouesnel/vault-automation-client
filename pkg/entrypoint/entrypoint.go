@@ -3,16 +3,17 @@ package entrypoint
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/alecthomas/kong"
 	"github.com/samber/lo"
 	"github.com/wrouesnel/vault-automation-client/pkg/templating"
 	"github.com/wrouesnel/vault-automation-client/pkg/vaultutil/unsealer"
 	"github.com/wrouesnel/vault-automation-client/version"
 	"go.uber.org/zap"
-	"io"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 type Options struct {

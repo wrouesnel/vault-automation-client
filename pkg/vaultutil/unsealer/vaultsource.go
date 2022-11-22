@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"strings"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/wrouesnel/vault-automation-client/pkg/certutils"
 	"go.uber.org/zap"
-	"strings"
 )
 
 // VaultSource retreives the unseal key from a path in Hashicorp Vault
@@ -35,7 +36,7 @@ type VaultSource struct {
 	SecretKey string `help:"subkey of the secret to read." default:"value"`
 }
 
-// TODO: determine GetUnsealKey utility at startup
+// TODO: determine GetUnsealKey utility at startup.
 func (k *VaultSource) GetUnsealKey() (string, error) {
 	logger := zap.L().With(zap.String("keysource", "vault"),
 		zap.String("vault_addr", k.VaultAddr), zap.String("auth_type", k.AuthType))

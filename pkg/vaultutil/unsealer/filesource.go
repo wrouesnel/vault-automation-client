@@ -2,9 +2,10 @@ package unsealer
 
 import (
 	"bufio"
-	"github.com/pkg/errors"
 	"io"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 type FileSource struct {

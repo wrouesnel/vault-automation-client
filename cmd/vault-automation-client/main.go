@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/wrouesnel/vault-automation-client/pkg/entrypoint"
 	"github.com/wrouesnel/vault-automation-client/pkg/envutil"
-	"os"
 
 	"github.com/samber/lo"
 )

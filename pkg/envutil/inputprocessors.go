@@ -1,11 +1,10 @@
 package envutil
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
-
-import "fmt"
 
 // EnvironmentVariablesError is raised when an environment variable is improperly formatted.
 type EnvironmentVariablesError struct {
