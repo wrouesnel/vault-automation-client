@@ -86,8 +86,8 @@ func (k *KubernetesSource) GetUnsealKey() (string, error) {
 	logger.Info("Secret retrieved",
 		zap.String("resource_version", secret.ResourceVersion))
 
-	logger.Debug("Get secret key from secret", zap.Strings("secret_keys", lo.Keys(secret.StringData)))
-	unsealKey, ok := secret.StringData[k.SecretKey]
+	logger.Debug("Get secret key from secret", zap.Strings("secret_keys", lo.Keys(secret.Data)))
+	unsealKey, ok := secret.Data[k.SecretKey]
 	if !ok {
 		logger.Error("SecretKey not found in Secret")
 		return "", &KeySourceErr{msg: "SecretKey not found in Secret"}
@@ -95,5 +95,5 @@ func (k *KubernetesSource) GetUnsealKey() (string, error) {
 
 	logger.Debug("Successfully read value from secret")
 
-	return unsealKey, nil
+	return string(unsealKey), nil
 }
