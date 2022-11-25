@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ Version.Name }}</title>
+    <style>
+        .block {
+            background-color: #f9f9f9;
+            margin-bottom: 30px;
+            margin-top: 30px;
+            padding: 30px 0;
+            text-align: center;
+        }
+        .footnote {
+            font-size: 0.9em;
+        }
+        .version {
+            font-size: 0.8em;
+        }
+        .red {
+            color: #c7254e;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .table-fit {
+            width: 1px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ Version.Name }}</h1>
+    <p>Version: <pre>{{ Version.Version }}</pre></p>
+    <p>{{ Version.Description }}</p>
+
+
+</body>
+</html>

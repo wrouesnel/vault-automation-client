@@ -3,6 +3,7 @@ package entrypoint
 import (
 	"context"
 	"fmt"
+	"github.com/wrouesnel/vault-automation-client/assets"
 	"io"
 	"os"
 	"os/signal"
@@ -21,6 +22,8 @@ type Options struct {
 		Level  string `help:"logging level" default:"warning"`
 		Format string `help:"logging format (${enum})" enum:"console,json" default:"console"`
 	} `embed:"" prefix:"logging."`
+
+	Assets assets.Config `embed:"" prefix:"assets." help:"configure embedded asset handling"`
 
 	Version bool `help:"Print the version and exit"`
 
@@ -103,7 +106,7 @@ func Entrypoint(args LaunchArgs) int {
 	logger.Info("Starting command")
 	switch ctx.Command() {
 	case "unsealer <vault-endpoint> <vault-instance>":
-		err = unsealer.UnsealerEntrypoint(appCtx, &options.Unsealer)
+		err = unsealer.UnsealerEntrypoint(appCtx, options.Assets, &options.Unsealer)
 	case "read-env-var <name> <output>":
 		err = templating.ReadEnvEntrypoint(appCtx, &options.ReadEnvVar)
 	default:

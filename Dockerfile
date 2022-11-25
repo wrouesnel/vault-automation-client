@@ -20,6 +20,9 @@ COPY --from=build /config /
 
 ENV PATH=/bin:$PATH
 
+# Default enable the monitor endpoint when running as a container
+ENV VAC_MONITOR_ENABLE=true
+
 ENTRYPOINT ["vault-automation-client"]
 
 USER 1001

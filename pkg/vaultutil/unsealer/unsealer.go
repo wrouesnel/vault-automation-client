@@ -91,6 +91,7 @@ func (v VaultUnsealerOperationError) Error() string {
 type VaultUnsealer interface {
 	Start(config VaultUnsealerConfig) chan error
 	Stop()
+	Liveness() time.Time
 }
 
 // VaultUnsealerInitializationConfig provides initialization parameters for the Vault Unsealer.
@@ -120,11 +121,14 @@ func NewVaultUnsealer(config VaultUnsealerInitializationConfig) (VaultUnsealer, 
 		return nil, &VaultUnsealerInitializationError{"no httpClient provided"}
 	}
 
-	return &vaultUnsealer{
+	vu := &vaultUnsealer{
 		config:                            nil,
 		exitCh:                            make(chan struct{}),
+		monitorCh:                         make(chan time.Time),
 		VaultUnsealerInitializationConfig: config,
-	}, nil
+	}
+
+	return vu, nil
 }
 
 // vaultUnsealer.
@@ -132,6 +136,10 @@ type vaultUnsealer struct {
 	// configCh receives configuration when SetConfig is called
 	config *VaultUnsealerConfig
 	exitCh chan struct{}
+	// monitorCh dispatches updates from the main loop to liveness requests.
+	// The update is simply the time the request was able to be handled.
+	monitorCh chan time.Time
+
 	VaultUnsealerInitializationConfig
 }
 
@@ -329,6 +337,16 @@ func (vu *vaultUnsealer) unsealPoll() {
 	}
 }
 
+// Liveness polls the main loop for functionality
+func (vu *vaultUnsealer) Liveness() time.Time {
+	select {
+	case <-vu.exitCh:
+		return time.Time{}
+	case t := <-vu.monitorCh:
+		return t
+	}
+}
+
 // Start initializes the Vault unsealer to watch the instance.
 func (vu *vaultUnsealer) Start(config VaultUnsealerConfig) chan error {
 	errCh := make(chan error)
@@ -347,6 +365,9 @@ func (vu *vaultUnsealer) Start(config VaultUnsealerConfig) chan error {
 			case <-vu.exitCh:
 				vu.log().Info("Shutdown requested")
 				break mainLoop
+
+			case vu.monitorCh <- time.Now():
+				vu.log().Debug("Dispatched liveness")
 
 			case t := <-ticker.C:
 				// Timer fired.

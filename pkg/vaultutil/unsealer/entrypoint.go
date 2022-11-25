@@ -5,6 +5,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/flosch/pongo2/v6"
+	"github.com/wrouesnel/vault-automation-client/assets"
+	"github.com/wrouesnel/vault-automation-client/pkg/vaultutil/server"
+	"github.com/wrouesnel/vault-automation-client/version"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -19,6 +23,9 @@ import (
 
 // UnsealerCommand implements the command line interface for starting the unsealer.
 type UnsealerCommand struct {
+	MonitorEnable bool                       `help:"enable the HTTP monitor port"`
+	Monitor       server.MonitorServerConfig `embed:"" prefix:"monitor." help:"configuration for the monitoring endpoint"`
+
 	TLSNoVerify bool     `help:"disable TLS verification"`
 	TLSCAFiles  []string `help:"additional TLS CA certificate files"`
 
@@ -41,7 +48,7 @@ type UnsealerCommand struct {
 	PollFrequency time.Duration `help:"frequency to check the Vault instance for unlocks" default:"1s"`
 }
 
-func UnsealerEntrypoint(ctx context.Context, uc *UnsealerCommand) error {
+func UnsealerEntrypoint(ctx context.Context, assetConfig assets.Config, uc *UnsealerCommand) error {
 	logger := zap.L()
 	instanceHTTPClient := resty.New()
 	endpointHTTPClient := resty.New()
@@ -129,12 +136,42 @@ func UnsealerEntrypoint(ctx context.Context, uc *UnsealerCommand) error {
 		CanInitialize:   uc.Initialize,
 		LeaderCACert:    leaderCACert,
 	})
-
 	logger.Info("Unsealer started")
+
+	unsealerCtx, cancelForUnsealer := context.WithCancel(ctx)
+	ctx = unsealerCtx
+	go func() {
+		err := <-errCh
+		if err != nil {
+			logger.Error("Caught error from unsealer", zap.Error(err))
+		} else {
+			logger.Info("Unsealer exited normally")
+		}
+		cancelForUnsealer()
+	}()
+
+	if uc.MonitorEnable {
+		logger.Info("Starting up monitoring web service")
+
+		templateGlobals := make(pongo2.Context)
+		templateGlobals["Version"] = map[string]string{
+			"Version":     version.Version,
+			"Name":        version.Name,
+			"Description": version.Description,
+		}
+
+		// Pass the context through so we can cancel successfully
+		uc.Monitor.Ctx = unsealerCtx
+		uc.Monitor.Liveness = unsealer
+		ctx = server.MonitorServer(uc.Monitor, assetConfig, templateGlobals)
+	}
+
+	logger.Info("Unsealer is up")
 	<-ctx.Done()
 	unsealer.Stop()
-	err = <-errCh
-	logger.Info("Unsealed finished", zap.Error(err))
+	logger.Info("Exiting waiting for unsealer to finish")
+	<-unsealerCtx.Done()
+	logger.Info("Unsealer finished", zap.Error(err))
 
 	return nil
 }
