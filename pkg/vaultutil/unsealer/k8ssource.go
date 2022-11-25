@@ -2,6 +2,7 @@ package unsealer
 
 import (
 	"context"
+	"github.com/samber/lo"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -47,6 +48,8 @@ func (k *KubernetesSource) GetUnsealKey() (string, error) {
 			logger.Error("Failed to build a local kubernetes client", zap.Error(err))
 			return "", errors.Wrap(err, "all K8S client attempts failed")
 		}
+	} else {
+		logger.Info("Using In-Cluster Configuration")
 	}
 
 	if k.ClusterAddr != "" {
@@ -68,9 +71,12 @@ func (k *KubernetesSource) GetUnsealKey() (string, error) {
 		return "", errors.Wrap(err, "GetUnsealKey:kubernetes.NewForConfig")
 	}
 
+	logger.Debug("Acquire Core API Client")
 	core := client.CoreV1()
+	logger.Debug("Acquire Secrets API client for namespace")
 	secrets := core.Secrets(k.SecretNamespace)
 
+	logger.Debug("Get Secret")
 	secret, err := secrets.Get(context.Background(), k.SecretName, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("Failed to retrieve secret", zap.Error(err))
@@ -80,11 +86,14 @@ func (k *KubernetesSource) GetUnsealKey() (string, error) {
 	logger.Info("Secret retrieved",
 		zap.String("resource_version", secret.ResourceVersion))
 
+	logger.Debug("Get secret key from secret", zap.Strings("secret_keys", lo.Keys(secret.StringData)))
 	unsealKey, ok := secret.StringData[k.SecretKey]
 	if !ok {
 		logger.Error("SecretKey not found in Secret")
 		return "", &KeySourceErr{msg: "SecretKey not found in Secret"}
 	}
+
+	logger.Debug("Successfully read value from secret")
 
 	return unsealKey, nil
 }
