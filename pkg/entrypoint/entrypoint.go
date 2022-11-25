@@ -46,7 +46,8 @@ func Entrypoint(args LaunchArgs) int {
 	deferredLogs := []string{}
 
 	// Command line parsing can now happen
-	parser := lo.Must(kong.New(&options, kong.Description(version.Description)))
+	parser := lo.Must(kong.New(&options, kong.Description(version.Description),
+		kong.DefaultEnvars(version.EnvPrefix)))
 	ctx, err := parser.Parse(args.Args)
 	if err != nil {
 		_, _ = fmt.Fprintf(args.StdErr, "Argument error: %s", err.Error())

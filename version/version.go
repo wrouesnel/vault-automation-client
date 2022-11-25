@@ -4,4 +4,6 @@ package version
 //nolint:gochecknoglobals
 var Version = "development"
 
+const Name = "vault-cluster-automation"
+const EnvPrefix = "VAC"
 const Description = "Vault Cluster Automation"
