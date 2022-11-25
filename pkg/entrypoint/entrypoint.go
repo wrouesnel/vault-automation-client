@@ -81,6 +81,11 @@ func Entrypoint(args LaunchArgs) int {
 		return 0
 	}
 
+	logger.Info("Version Info", zap.String("version", version.Version),
+		zap.String("name", version.Name),
+		zap.String("description", version.Description),
+		zap.String("env_prefix", version.EnvPrefix))
+
 	appCtx, cancelFn := context.WithCancel(context.Background())
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM)
