@@ -2,10 +2,9 @@ module github.com/wrouesnel/vault-automation-client
 
 go 1.18
 
-require gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-
 require (
 	github.com/alecthomas/kong v0.7.1
+	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc
 	github.com/labstack/echo/v4 v4.9.1
@@ -14,7 +13,7 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/rogpeppe/go-internal v1.9.0
-	github.com/samber/lo v1.35.0
+	github.com/samber/lo v1.36.0
 	go.uber.org/zap v1.23.0
 	go.withmatt.com/httpheaders v0.0.0-20220809015020-3dbe1127da7b
 	gopkg.in/yaml.v3 v3.0.1
@@ -28,7 +27,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
-	github.com/flosch/pongo2/v6 v6.0.0 // indirect
 	github.com/frankban/quicktest v1.14.3 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
