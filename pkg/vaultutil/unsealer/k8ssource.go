@@ -38,15 +38,21 @@ func (k *KubernetesSource) GetUnsealKey() (string, error) {
 		zap.String("secret_key", k.SecretKey))
 	logger.Debug("Checking for in-cluster config")
 	config, err := rest.InClusterConfig()
-	if errors.Is(err, rest.ErrNotInCluster) {
-		logger.Debug("Not in cluster. Attempting to configure for external operation.")
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		configOverrides := &clientcmd.ConfigOverrides{}
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-		config, err = kubeConfig.ClientConfig()
-		if err != nil {
-			logger.Error("Failed to build a local kubernetes client", zap.Error(err))
-			return "", errors.Wrap(err, "all K8S client attempts failed")
+	if err != nil {
+		if errors.Is(err, rest.ErrNotInCluster) {
+			logger.Debug("Not in cluster. Attempting to configure for external operation.")
+
+			loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+			configOverrides := &clientcmd.ConfigOverrides{}
+			kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+			config, err = kubeConfig.ClientConfig()
+			if err != nil {
+				logger.Error("Failed to build a local kubernetes client", zap.Error(err))
+				return "", errors.Wrap(err, "all K8S client attempts failed")
+			}
+		} else {
+			logger.Error("In-Cluster but failed to acquire a K8S config - check attached errors", zap.Error(err))
+			return "", errors.Wrap(err, "In-Cluster config failed")
 		}
 	} else {
 		logger.Info("Using In-Cluster Configuration")
